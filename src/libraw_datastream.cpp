@@ -36,7 +36,10 @@
 #define NO_JASPER
 #endif
 #ifdef USE_JPEG
+extern "C"
+{
 #include <jpeglib.h>
+}
 #else
 #define NO_JPEG
 #endif

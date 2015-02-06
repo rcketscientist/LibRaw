@@ -76,7 +76,10 @@ typedef unsigned long long UINT64;
 #include <jasper/jasper.h>	/* Decode Red camera movies */
 #endif
 #ifndef NO_JPEG
+extern "C"
+{
 #include <jpeglib.h>		/* Decode compressed Kodak DC120 photos */
+}
 #endif				/* and Adobe Lossy DNGs */
 #ifndef NO_LCMS
 #ifdef USE_LCMS
