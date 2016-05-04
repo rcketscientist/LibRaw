@@ -22,6 +22,10 @@ it under the terms of the one of three licenses as you choose:
 */
 
 
+#ifdef ANDROID
+#include <libraw_swab.h>
+#endif
+
 #include <swab.h>
 #include <math.h>
 #define CLASS LibRaw::
@@ -6021,7 +6025,7 @@ void CLASS Canon_WBpresets (int skip1, int skip2)
 void CLASS Canon_WBCTpresets (short WBCTversion)
 {
 	if (WBCTversion == 0)
-	  for (int i=0; i<15; i++)// tint, as shot R, as shot B, C?T
+	  for (int i=0; i<15; i++)// tint, as shot R, as shot B, CСT
 	    {
 		imgdata.color.WBCT_Coeffs[i][2] = imgdata.color.WBCT_Coeffs[i][4] = 1.0f;
 		fseek (ifp, 2, SEEK_CUR);
@@ -6030,7 +6034,7 @@ void CLASS Canon_WBCTpresets (short WBCTversion)
 		imgdata.color.WBCT_Coeffs[i][0] = get2();
 	    }
 	else if (WBCTversion == 1)
-	  for (int i=0; i<15; i++)	// as shot R, as shot B, tint, C?T
+	  for (int i=0; i<15; i++)	// as shot R, as shot B, tint, CСT
 	    {
 		imgdata.color.WBCT_Coeffs[i][2] = imgdata.color.WBCT_Coeffs[i][4] = 1.0f;
 		imgdata.color.WBCT_Coeffs[i][1] = 1024.0f / fMAX(get2(),1.f);
@@ -6041,7 +6045,7 @@ void CLASS Canon_WBCTpresets (short WBCTversion)
 	else if ((WBCTversion == 2) &&
 		((unique_id == 0x80000374) ||	// M3
 		 (unique_id == 0x80000384)))	// M10
-	  for (int i=0; i<15; i++)	// tint, offset, as shot R, as shot B, C?T
+	  for (int i=0; i<15; i++)	// tint, offset, as shot R, as shot B, CСT
 	    {
 		fseek (ifp, 2, SEEK_CUR);
 		fseek (ifp, 2, SEEK_CUR);
@@ -6052,7 +6056,7 @@ void CLASS Canon_WBCTpresets (short WBCTversion)
 	    }
 	else if ((WBCTversion == 2) &&
                 ((unique_id == 0x03950000) || (unique_id == 0x03930000)))	// G5 X
-	  for (int i=0; i<15; i++)	// tint, offset, as shot R, as shot B, C?T
+	  for (int i=0; i<15; i++)	// tint, offset, as shot R, as shot B, CСT
 	    {
 		fseek (ifp, 2, SEEK_CUR);
 		fseek (ifp, 2, SEEK_CUR);
