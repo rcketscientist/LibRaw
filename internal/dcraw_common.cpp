@@ -22,10 +22,7 @@ it under the terms of the one of three licenses as you choose:
 */
 
 
-#ifdef ANDROID
-#include <libraw_swab.h>
-#endif
-
+#include <swab.h>
 #include <math.h>
 #define CLASS LibRaw::
 #include "libraw/libraw_types.h"
