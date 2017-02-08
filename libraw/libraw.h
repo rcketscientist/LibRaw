@@ -174,6 +174,7 @@ public:
   static const char *strerror(int p);
   /* dcraw emulation */
   int dcraw_ppm_tiff_writer(const char *filename);
+  int dcraw_ppm_tiff_writer(int fd);
   int dcraw_thumb_writer(const char *fname);
   int dcraw_process(void);
   /* information calls */
@@ -298,7 +299,7 @@ protected:
   void identify();
   unsigned parse_custom_cameras(unsigned limit, libraw_custom_camera_t table[], char **list);
   void write_ppm_tiff();
-    int         dcraw_ppm_tiff_writer(FILE* f);
+  int  dcraw_ppm_tiff_writer(FILE* f);
   void convert_to_rgb();
   void remove_zeroes();
   void crop_masked_pixels();

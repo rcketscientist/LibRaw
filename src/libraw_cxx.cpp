@@ -15,7 +15,7 @@ it under the terms of the one of two licenses as you choose:
    (See file LICENSE.CDDL provided in LibRaw distribution archive for details).
 
  */
-
+#include <swab.h>
 #include <math.h>
 #include <errno.h>
 #include <float.h>
@@ -3652,7 +3652,22 @@ int LibRaw::dcraw_ppm_tiff_writer(const char *filename)
   if (!filename)
     return ENOENT;
   FILE *f = fopen(filename, "wb");
+  return dcraw_ppm_tiff_writer(f);
+}
 
+int LibRaw::dcraw_ppm_tiff_writer(int fd)
+{
+	CHECK_ORDER_LOW(LIBRAW_PROGRESS_LOAD_RAW);
+
+	if(!imgdata.image)
+		return LIBRAW_OUT_OF_ORDER_CALL;
+
+	FILE *f = fdopen(fd,"wb");
+	return dcraw_ppm_tiff_writer(f);
+}
+
+int LibRaw::dcraw_ppm_tiff_writer(FILE* f)
+{
   if (!f)
     return errno;
 
