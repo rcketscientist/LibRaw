@@ -19,7 +19,7 @@ it under the terms of the one of two licenses as you choose:
 
 #ifndef _LIBRAW_TYPES_H
 #define _LIBRAW_TYPES_H
-
+#include <../../android_endian.h>
 #include <sys/types.h>
 #ifndef WIN32
 #include <sys/time.h>

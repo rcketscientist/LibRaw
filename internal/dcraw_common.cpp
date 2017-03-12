@@ -19,6 +19,8 @@ it under the terms of the one of two licenses as you choose:
 */
 
 
+#include <swab.h>
+
 #include <math.h>
 #define CLASS LibRaw::
 #include "libraw/libraw_types.h"
