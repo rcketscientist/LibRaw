@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  * File: identify.cpp
- * Copyright 2008-2016 LibRaw LLC (info@libraw.org)
+ * Copyright 2008-2018 LibRaw LLC (info@libraw.org)
  * Created: Sat Mar  8, 2008
  *
  * LibRaw C++ demo: emulates dcraw -i [-v]
@@ -44,8 +44,11 @@ it under the terms of the one of two licenses as you choose:
 #define T MyCoolRawProcessor.imgdata.thumbnail
 
 #define Canon MyCoolRawProcessor.imgdata.makernotes.canon
+#define Hasselblad MyCoolRawProcessor.imgdata.makernotes.hasselblad
 #define Fuji MyCoolRawProcessor.imgdata.makernotes.fuji
+#define Nikon MyCoolRawProcessor.imgdata.makernotes.nikon
 #define Oly MyCoolRawProcessor.imgdata.makernotes.olympus
+#define Sony MyCoolRawProcessor.imgdata.makernotes.sony
 
 const char *EXIF_LightSources[] = {
     "Unknown",
@@ -106,7 +109,7 @@ void trimSpaces(char *s)
 
 int main(int ac, char *av[])
 {
-  int verbose = 0, ret, print_unpack = 0, print_frame = 0, print_wb = 0;
+  int verbose = 0, ret, print_sz = 0, print_unpack = 0, print_frame = 0, print_wb = 0;
   int compact = 0;
   LibRaw MyCoolRawProcessor;
 
@@ -122,10 +125,12 @@ int main(int ac, char *av[])
         print_wb++;
       if (av[i][1] == 'u' && av[i][2] == 0)
         print_unpack++;
+      if (av[i][1] == 's' && av[i][2] == 0)
+        print_sz++;
+      if (av[i][1] == 'h' && av[i][2] == 0)
+        O.half_size = 1;
       if (av[i][1] == 'f' && av[i][2] == 0)
         print_frame++;
-      if (av[i][1] == 'x' && av[i][2] == 0)
-        O.raw_processing_options |= LIBRAW_PROCESSING_FORCE_FOVEON_X3F;
       continue;
     }
     if ((ret = MyCoolRawProcessor.open_file(av[i])) != LIBRAW_SUCCESS)
@@ -133,7 +138,11 @@ int main(int ac, char *av[])
       printf("Cannot decode %s: %s\n", av[i], libraw_strerror(ret));
       continue; // no recycle, open_file will recycle
     }
-    if (verbose)
+    if (print_sz)
+    {
+      printf("%s\t%s\t%s\t%d\t%d\n", av[i], P1.make, P1.model, S.width, S.height);
+    }
+    else if (verbose)
     {
       if ((ret = MyCoolRawProcessor.adjust_sizes_info_only()))
       {
@@ -143,7 +152,7 @@ int main(int ac, char *av[])
 
       printf("\nFilename: %s\n", av[i]);
       printf("Timestamp: %s", ctime(&(P2.timestamp)));
-      printf("Camera: %s %s\n", P1.make, P1.model);
+      printf("Camera: %s %s ID: 0x%llx\n", P1.make, P1.model, mnLens.CamID);
       if (ShootingInfo.BodySerial[0])
       {
         trimSpaces(ShootingInfo.BodySerial);
@@ -422,12 +431,30 @@ int main(int ac, char *av[])
       printf("\n");
 
       printf("ISO speed: %d\n", (int)P2.iso_speed);
+      if (P2.real_ISO > 0.1f)
+        printf("real ISO speed: %d\n", (int)P2.real_ISO);
       printf("Shutter: ");
       if (P2.shutter > 0 && P2.shutter < 1)
         P2.shutter = (printf("1/"), 1 / P2.shutter);
       printf("%0.1f sec\n", P2.shutter);
       printf("Aperture: f/%0.1f\n", P2.aperture);
       printf("Focal length: %0.1f mm\n", P2.focal_len);
+      if (P2.exifAmbientTemperature > -273.15f)
+        printf("Ambient temperature (exif data): %6.2f° C\n", P2.exifAmbientTemperature);
+      if (P2.CameraTemperature > -273.15f)
+        printf("Camera temperature: %6.2f° C\n", P2.CameraTemperature);
+      if (P2.SensorTemperature > -273.15f)
+        printf("Sensor temperature: %6.2f° C\n", P2.SensorTemperature);
+      if (P2.SensorTemperature2 > -273.15f)
+        printf("Sensor temperature2: %6.2f° C\n", P2.SensorTemperature2);
+      if (P2.LensTemperature > -273.15f)
+        printf("Lens temperature: %6.2f° C\n", P2.LensTemperature);
+      if (P2.AmbientTemperature > -273.15f)
+        printf("Ambient temperature: %6.2f° C\n", P2.AmbientTemperature);
+      if (P2.BatteryTemperature > -273.15f)
+        printf("Battery temperature: %6.2f° C\n", P2.BatteryTemperature);
+      if (P2.FlashGN > 1.0f)
+        printf("Flash Guide Number: %6.2f\n", P2.FlashGN);
       printf("Flash exposure compensation: %0.2f EV\n", P2.FlashEC);
       if (C.profile)
         printf("Embedded ICC profile: yes, %d bytes\n", C.profile_length);
@@ -458,6 +485,16 @@ int main(int ac, char *av[])
         printf("Thumb size:  %4d x %d\n", T.twidth, T.theight);
       printf("Full size:   %4d x %d\n", S.raw_width, S.raw_height);
 
+      if (S.raw_crop.cwidth)
+      {
+        printf("Raw crop, width x height: %4d x %d ", S.raw_crop.cwidth, S.raw_crop.cheight);
+        if (S.raw_crop.cleft != 0xffff)
+          printf("left: %d ", S.raw_crop.cleft);
+        if (S.raw_crop.ctop != 0xffff)
+          printf("top: %d", S.raw_crop.ctop);
+        printf("\n");
+      }
+
       printf("Image size:  %4d x %d\n", S.width, S.height);
       printf("Output size: %4d x %d\n", S.iwidth, S.iheight);
 
@@ -481,6 +518,14 @@ int main(int ac, char *av[])
         printf("BlackMaskRightBorder = %d\n", Canon.BlackMaskRightBorder);
       if (Canon.BlackMaskBottomBorder)
         printf("BlackMaskBottomBorder= %d\n", Canon.BlackMaskBottomBorder);
+      if (Canon.ChannelBlackLevel[0])
+        printf("ChannelBlackLevel (from makernotes): %d %d %d %d\n", Canon.ChannelBlackLevel[0],
+               Canon.ChannelBlackLevel[1], Canon.ChannelBlackLevel[2], Canon.ChannelBlackLevel[3]);
+
+      if (Hasselblad.BaseISO)
+        printf("Hasselblad base ISO: %d\n", Hasselblad.BaseISO);
+      if (Hasselblad.Gain)
+        printf("Hasselblad gain: %g\n", Hasselblad.Gain);
 
       if (Oly.OlympusCropID != -1)
       {
@@ -507,7 +552,7 @@ int main(int ac, char *av[])
       }
       if (C.cam_mul[0] > 0)
       {
-        printf("\nMakernotes 'As shot' multipliers:");
+        printf("\nMakernotes 'As shot' WB multipliers:");
         for (int c = 0; c < 4; c++)
           printf(" %f", C.cam_mul[c]);
       }
@@ -516,17 +561,88 @@ int main(int ac, char *av[])
       {
         if (C.WB_Coeffs[cnt][0] > 0)
         {
-          printf("\nMakernotes '%s' multipliers:", EXIF_LightSources[cnt]);
+          printf("\nMakernotes '%s' WB multipliers:", EXIF_LightSources[cnt]);
           for (int c = 0; c < 4; c++)
             printf(" %d", C.WB_Coeffs[cnt][c]);
         }
       }
+      if (C.WB_Coeffs[LIBRAW_WBI_Sunset][0] > 0)
+      {
+        printf("\nMakernotes 'Sunset' multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Sunset][c]);
+      }
+
       if (C.WB_Coeffs[LIBRAW_WBI_Other][0] > 0)
       {
         printf("\nMakernotes 'Other' multipliers:");
         for (int c = 0; c < 4; c++)
           printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Other][c]);
       }
+
+      if (C.WB_Coeffs[LIBRAW_WBI_Auto][0] > 0)
+      {
+        printf("\nMakernotes 'Camera Auto' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Auto][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Measured][0] > 0)
+      {
+        printf("\nMakernotes 'Camera Measured' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Measured][c]);
+      }
+
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom][0] > 0)
+      {
+        printf("\nMakernotes 'Custom' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom1][0] > 0)
+      {
+        printf("\nMakernotes 'Custom1' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom1][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom2][0] > 0)
+      {
+        printf("\nMakernotes 'Custom2' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom2][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom3][0] > 0)
+      {
+        printf("\nMakernotes 'Custom3' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom3][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom4][0] > 0)
+      {
+        printf("\nMakernotes 'Custom4' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom4][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom5][0] > 0)
+      {
+        printf("\nMakernotes 'Custom5' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom5][c]);
+      }
+      if (C.WB_Coeffs[LIBRAW_WBI_Custom6][0] > 0)
+      {
+        printf("\nMakernotes 'Custom6' WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %d", C.WB_Coeffs[LIBRAW_WBI_Custom6][c]);
+      }
+
+      if ((Nikon.ME_WB[0] != 0.0f) && (Nikon.ME_WB[0] != 1.0f))
+      {
+        printf("\nNikon multi-exposure WB multipliers:");
+        for (int c = 0; c < 4; c++)
+          printf(" %f", Nikon.ME_WB[c]);
+      }
+
       if (C.rgb_cam[0][0] > 0.0001 && P1.colors > 1)
       {
         printf("\nCamera2RGB matrix:\n");
@@ -634,6 +750,16 @@ int main(int ac, char *av[])
       for (int c = 0; c < P1.colors; c++)
         printf(" %f", C.pre_mul[c]);
       printf("\n");
+
+      if (Sony.Sony0x9400_version)
+        printf("\nSONY Sequence data, tag 0x9400 version %x\n\
+\tReleaseMode2: %d\n\
+\tSequenceImageNumber: %d (starts at zero)\n\
+\tSequenceLength1: %d shot(s)\n\
+\tSequenceFileNumber: %d (starts at zero, exiftool starts at 1)\n\
+\tSequenceLength2: %d file(s)\n",
+               Sony.Sony0x9400_version, Sony.Sony0x9400_ReleaseMode2, Sony.Sony0x9400_SequenceImageNumber,
+               Sony.Sony0x9400_SequenceLength1, Sony.Sony0x9400_SequenceFileNumber, Sony.Sony0x9400_SequenceLength2);
     }
     else
     {
@@ -662,6 +788,17 @@ int main(int ac, char *av[])
             else
               printf("%6.5ff}},\n", C.WB_Coeffs[cnt][3] / (float)C.WB_Coeffs[cnt][1]);
           }
+        if (C.WB_Coeffs[LIBRAW_WBI_Sunset][0])
+        {
+          printf("{\"%s\", \"%s\", %d, {%6.5ff, 1.0f, %6.5ff, ", P1.make, P1.model, LIBRAW_WBI_Sunset,
+                 C.WB_Coeffs[LIBRAW_WBI_Sunset][0] / (float)C.WB_Coeffs[LIBRAW_WBI_Sunset][1],
+                 C.WB_Coeffs[LIBRAW_WBI_Sunset][2] / (float)C.WB_Coeffs[LIBRAW_WBI_Sunset][1]);
+          if (C.WB_Coeffs[LIBRAW_WBI_Sunset][1] == C.WB_Coeffs[LIBRAW_WBI_Sunset][3])
+            printf("1.0f}},\n");
+          else
+            printf("%6.5ff}},\n", C.WB_Coeffs[LIBRAW_WBI_Sunset][3] / (float)C.WB_Coeffs[LIBRAW_WBI_Sunset][1]);
+        }
+
         for (int cnt = 0; cnt < 64; cnt++)
           if (C.WBCT_Coeffs[cnt][0])
           {
